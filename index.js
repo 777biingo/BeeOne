@@ -11,39 +11,59 @@ const {
 
 const sqlite3 = require("sqlite3").verbose();
 
-// ===== DB =====
+// ================= DATABASE =================
 const db = new sqlite3.Database("./data.db");
 
 db.run(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   pollen INTEGER DEFAULT 0,
-  honey INTEGER DEFAULT 0
+  honey INTEGER DEFAULT 0,
+  bees TEXT DEFAULT 'common'
 )
 `);
 
+// ================= BEES =================
+const bees = {
+  common: { name: "🐝 Common Bee", boost: 1 },
+  rare: { name: "🟢 Rare Bee", boost: 2 },
+  epic: { name: "🟣 Epic Bee", boost: 4 },
+  legendary: { name: "🟡 Legendary Bee", boost: 7 }
+};
+
+function getBeeBoost(type) {
+  return bees[type]?.boost || 1;
+}
+
+// ================= USER =================
 function getUser(id, cb) {
   db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
     if (!row) {
-      db.run("INSERT INTO users (id) VALUES (?)", [id]);
-      return cb({ id, pollen: 0, honey: 0 });
+      db.run(
+        "INSERT INTO users (id, bees) VALUES (?, 'common')",
+        [id]
+      );
+      return cb({ id, pollen: 0, honey: 0, bees: "common" });
     }
     cb(row);
   });
 }
 
 function addPollen(id, amount) {
-  db.run("UPDATE users SET pollen = pollen + ? WHERE id = ?", [amount, id]);
+  db.run("UPDATE users SET pollen = pollen + ? WHERE id = ?", [
+    amount,
+    id
+  ]);
 }
 
-function sellHoney(id) {
+function sellAll(id) {
   db.run(
     "UPDATE users SET honey = honey + pollen * 2, pollen = 0 WHERE id = ?",
     [id]
   );
 }
 
-// ===== BOT =====
+// ================= BOT =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -56,25 +76,30 @@ client.once("clientReady", () => {
   console.log(`Zalogowano jako ${client.user.tag}`);
 });
 
-// ===== !play =====
+// ================= COMMANDS =================
 client.on("messageCreate", (message) => {
   if (message.author.bot) return;
 
+  // !play
   if (message.content === "!play") {
     getUser(message.author.id, (user) => {
+      const bee = bees[user.bees];
+
       const embed = new EmbedBuilder()
         .setTitle("🐝 Bee Fisher")
-        .setDescription("Zbieraj pyłek i produkuj miód!")
+        .setDescription("Zbieraj pyłek i rozwijaj swoje pszczoły!")
         .addFields(
           { name: "🌸 Pyłek", value: `${user.pollen}` },
-          { name: "🍯 Miód", value: `${user.honey}` }
+          { name: "🍯 Miód", value: `${user.honey}` },
+          { name: "🐝 Pszczoła", value: bee.name },
+          { name: "⚡ Boost", value: `x${bee.boost}` }
         )
         .setColor("Yellow");
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("collect")
-          .setLabel("🌸 Zbieraj pyłek")
+          .setLabel("🌸 Zbieraj")
           .setStyle(ButtonStyle.Primary),
 
         new ButtonBuilder()
@@ -86,35 +111,56 @@ client.on("messageCreate", (message) => {
       message.reply({ embeds: [embed], components: [row] });
     });
   }
+
+  // !bee
+  if (message.content === "!bee") {
+    getUser(message.author.id, (user) => {
+      const bee = bees[user.bees];
+
+      const embed = new EmbedBuilder()
+        .setTitle("🐝 Twoja pszczoła")
+        .setDescription(`Posiadasz: **${bee.name}**`)
+        .addFields({ name: "⚡ Boost", value: `x${bee.boost}` })
+        .setColor("Yellow");
+
+      message.reply({ embeds: [embed] });
+    });
+  }
 });
 
-// ===== BUTTONY =====
+// ================= BUTTONS =================
 client.on("interactionCreate", (interaction) => {
   if (!interaction.isButton()) return;
 
   const id = interaction.user.id;
 
-  // 🌸 collect
+  // 🌸 COLLECT
   if (interaction.customId === "collect") {
-    const amount = Math.floor(Math.random() * 10) + 1;
+    getUser(id, (user) => {
+      const boost = getBeeBoost(user.bees);
 
-    addPollen(id, amount);
+      const amount =
+        (Math.floor(Math.random() * 10) + 1) * boost;
 
-    return interaction.reply({
-      content: `🐝 Zebrałeś **${amount} pyłku!**`,
-      ephemeral: true
+      addPollen(id, amount);
+
+      interaction.reply({
+        content: `🐝 Zebrałeś **${amount} pyłku!** (x${boost})`,
+        ephemeral: true
+      });
     });
   }
 
-  // 💰 sell
+  // 💰 SELL
   if (interaction.customId === "sell") {
-    sellHoney(id);
+    sellAll(id);
 
-    return interaction.reply({
-      content: "🍯 Sprzedano cały pyłek na miód!",
+    interaction.reply({
+      content: "🍯 Sprzedano cały pyłek!",
       ephemeral: true
     });
   }
 });
 
+// ================= LOGIN =================
 client.login(process.env.TOKEN);
