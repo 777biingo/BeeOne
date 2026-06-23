@@ -8,7 +8,9 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  REST,
+  Routes
 } = require("discord.js");
 
 const sqlite3 = require("sqlite3").verbose();
