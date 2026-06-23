@@ -13,6 +13,7 @@ const {
 
 const sqlite3 = require("sqlite3").verbose();
 
+
 // ================= DB =================
 const db = new sqlite3.Database("./data.db");
 
@@ -91,6 +92,17 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ]
 });
+
+client.commands = new Map();
+
+const commandFiles = fs
+  .readdirSync("./commands")
+  .filter(file => file.endsWith(".js"));
+
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.data.name, command);
+}
 
 client.once("clientReady", () => {
   console.log(`Zalogowano jako ${client.user.tag}`);
