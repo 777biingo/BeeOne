@@ -106,8 +106,39 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
   console.log(`Zalogowano jako ${client.user.tag}`);
+
+  try {
+
+    const commands = [
+      {
+        name: "pfp",
+        description: "Zmienia avatar bota",
+        options: [
+          {
+            name: "obraz",
+            description: "Nowy avatar",
+            type: 11,
+            required: true
+          }
+        ]
+      }
+    ];
+
+    const rest = new REST({ version: "10" })
+      .setToken(process.env.TOKEN);
+
+    await rest.put(
+      Routes.applicationCommands("1518738358317093045"),
+      { body: commands }
+    );
+
+    console.log("Slash komendy zarejestrowane");
+
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 // ================= !play =================
