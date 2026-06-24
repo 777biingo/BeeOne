@@ -2,9 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { connectDB, getDb } = require('./db');
 
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
 client.once('ready', async () => {
     await connectDB();
@@ -13,29 +11,34 @@ client.once('ready', async () => {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith('!')) return;
-
+    
     const db = getDb();
     const userId = message.author.id;
+    const args = message.content.split(' ');
+    const command = args[0];
 
-    if (message.content === '!zbieraj') {
-        let user = await db.collection('users').findOne({ userId });
-        if (!user) {
-            user = { userId, honey: 0, bees: 1, lastHarvest: 0 };
-            await db.collection('users').insertOne(user);
-        }
+    // Pobranie profilu
+    let user = await db.collection('users').findOne({ userId });
+    if (!user) {
+        user = { userId, honey: 0, bees: 1, honeyPrice: 10 };
+        await db.collection('users').insertOne(user);
+    }
 
-        const now = Date.now();
-        if (now - user.lastHarvest < 60000) {
-            return message.reply("Twoje pszczoły odpoczywają! Wróć za chwilę.");
-        }
+    if (command === '!zbieraj') {
+        const gain = Math.floor(Math.random() * 5 * user.bees) + 1;
+        await db.collection('users').updateOne({ userId }, { $inc: { honey: gain } });
+        message.reply(`🐝 Zebrałeś ${gain} miodu!`);
+    }
 
-        const collected = Math.floor(Math.random() * 10 * user.bees) + 1;
-        await db.collection('users').updateOne(
-            { userId }, 
-            { $inc: { honey: collected }, $set: { lastHarvest: now } }
-        );
+    if (command === '!sklep') {
+        message.reply(`💰 Stan konta: ${user.honey} miodu. Koszt nowej pszczoły: ${user.bees * 50}. Komenda: !ulepsz`);
+    }
 
-        message.reply(`🐝 Zebrałeś ${collected} miodu! Masz teraz łącznie ${user.honey + collected} miodu.`);
+    if (command === '!ulepsz') {
+        const cost = user.bees * 50;
+        if (user.honey < cost) return message.reply("Nie masz wystarczająco miodu!");
+        await db.collection('users').updateOne({ userId }, { $inc: { honey: -cost, bees: 1 } });
+        message.reply(`✅ Ulepszono! Masz teraz ${user.bees + 1} pszczół.`);
     }
 });
 
