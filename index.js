@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { registerCommands } = require('./commands/register');
 const { handleButtonInteraction } = require('./handlers/buttonHandler');
+const { loadStats } = require('./utils/stats');
 
 const client = new Client({
   intents: [
@@ -14,6 +15,7 @@ const client = new Client({
 
 client.once('ready', async () => {
   console.log(`✅ Bot zalogowany jako ${client.user.tag}`);
+  loadStats();
   await registerCommands(client);
 });
 
