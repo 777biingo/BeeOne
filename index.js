@@ -2,7 +2,8 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { registerCommands } = require('./commands/register');
 const { handleButtonInteraction } = require('./handlers/buttonHandler');
-const { loadStats } = require('./utils/stats');
+const { loadStats, getUserStats } = require('./utils/stats');
+const { createStatsEmbed, createButtonRow } = require('./utils/embed');
 
 const client = new Client({
   intents: [
@@ -14,7 +15,7 @@ const client = new Client({
 });
 
 client.once('ready', async () => {
-  console.log(`✅ Bot zalogowany jako ${client.user.tag}`);
+  console.log(`:white_check_mark: Bot zalogowany jako ${client.user.tag}`);
   loadStats();
   await registerCommands(client);
 });
@@ -22,9 +23,6 @@ client.once('ready', async () => {
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isCommand()) {
     if (interaction.commandName === 'start') {
-      const { createStatsEmbed, createButtonRow } = require('./utils/embed');
-      const { getUserStats } = require('./utils/stats');
-      
       const userId = interaction.user.id;
       getUserStats(userId);
       
