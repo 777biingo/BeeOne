@@ -47,7 +47,8 @@ function createShopRow() {
     new ButtonBuilder().setCustomId('buy_bee').setLabel('🐝 Pszczoła (50)').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId('buy_hive').setLabel('🏠 Ul (200)').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId('upgrade_bee').setLabel('⬆️ Pszczoły (100)').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('upgrade_hive').setLabel('⬆️ Ule (150)').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('upgrade_hive').setLabel('⬆️ Ule (150)').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('back_to_main').setLabel('⬅️ Wróć').setStyle(ButtonStyle.Secondary)
   );
 }
 

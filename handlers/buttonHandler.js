@@ -3,6 +3,16 @@ const { createStatsEmbed, createButtonRow, createShopRow, createExchangeRow, cre
 
 async function handleButtonInteraction(interaction) {
   const userId = interaction.user.id;
+
+  // Sprawdź czy klikający jest właścicielem gry (tym, kto użył /start)
+  const originalUserId = interaction.message?.interaction?.user?.id;
+  if (originalUserId && userId !== originalUserId) {
+    return interaction.reply({
+      content: '❌ Tylko osoba która użyła /start może klikać przyciski.',
+      ephemeral: true,
+    });
+  }
+
   const stats = getUserStats(userId);
   const customId = interaction.customId;
 
@@ -110,6 +120,11 @@ async function handleButtonInteraction(interaction) {
     }
 
     else if (customId === 'back') {
+      const embed = createStatsEmbed(userId);
+      await interaction.update({ embeds: [embed], components: [createButtonRow()] });
+    }
+
+    else if (customId === 'back_to_main') {
       const embed = createStatsEmbed(userId);
       await interaction.update({ embeds: [embed], components: [createButtonRow()] });
     }
