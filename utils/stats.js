@@ -22,13 +22,10 @@ const DEFAULT_STATS = {
   },
 };
 
-/**
- * Wczytuje dane wszystkich graczy z pliku baza.json do pamięci RAM.
- * Wywoływana raz przy starcie bota (event 'ready').
- */
 function loadStats() {
   if (!fs.existsSync(STATS_FILE)) {
-    console.log('📂 Brak pliku baza.json — zaczynam z pustą bazą danych.');
+    console.log('📂 Brak pliku baza.json — tworzę nowy plik bazy.');
+    fs.writeFileSync(STATS_FILE, JSON.stringify({}, null, 2), 'utf-8');
     return;
   }
 
@@ -46,10 +43,6 @@ function loadStats() {
   }
 }
 
-/**
- * Zapisuje dane wszystkich graczy z pamięci RAM do pliku baza.json.
- * Wywoływana po każdej zmianie statystyk gracza.
- */
 function saveStats(userId, stats) {
   userStats.set(userId, stats);
 
@@ -63,7 +56,8 @@ function saveStats(userId, stats) {
 
 function getUserStats(userId) {
   if (!userStats.has(userId)) {
-    userStats.set(userId, JSON.parse(JSON.stringify(DEFAULT_STATS)));
+    const newStats = JSON.parse(JSON.stringify(DEFAULT_STATS));
+    saveStats(userId, newStats);
   }
   return userStats.get(userId);
 }
