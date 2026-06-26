@@ -1,13 +1,17 @@
 {
-  "name": "bee-bot",
+  "name": "bee-clicker-bot",
   "version": "1.0.0",
+  "description": "Discord Bee Clicker Bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.3",
-    "dotenv": "^16.4.5",
-    "mongodb": "^6.7.0"
+    "discord.js": "^14.14.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
