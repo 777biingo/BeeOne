@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const STATS_FILE = path.join(__dirname, '..', 'stats.json');
+const STATS_FILE = path.join(__dirname, '..', 'baza.json');
 
 const userStats = new Map();
 
@@ -23,12 +23,12 @@ const DEFAULT_STATS = {
 };
 
 /**
- * Wczytuje dane wszystkich graczy z pliku stats.json do pamięci RAM.
+ * Wczytuje dane wszystkich graczy z pliku baza.json do pamięci RAM.
  * Wywoływana raz przy starcie bota (event 'ready').
  */
 function loadStats() {
   if (!fs.existsSync(STATS_FILE)) {
-    console.log('📂 Brak pliku stats.json — zaczynam z pustą bazą danych.');
+    console.log('📂 Brak pliku baza.json — zaczynam z pustą bazą danych.');
     return;
   }
 
@@ -37,18 +37,17 @@ function loadStats() {
     const data = JSON.parse(raw);
 
     for (const [userId, stats] of Object.entries(data)) {
-      // Uzupełnij brakujące pola wartościami domyślnymi (np. po dodaniu nowych pól)
       userStats.set(userId, Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATS)), stats));
     }
 
-    console.log(`✅ Wczytano dane ${userStats.size} graczy z stats.json.`);
+    console.log(`✅ Wczytano dane ${userStats.size} graczy z baza.json.`);
   } catch (err) {
-    console.error('❌ Błąd podczas wczytywania stats.json:', err);
+    console.error('❌ Błąd podczas wczytywania baza.json:', err);
   }
 }
 
 /**
- * Zapisuje dane wszystkich graczy z pamięci RAM do pliku stats.json.
+ * Zapisuje dane wszystkich graczy z pamięci RAM do pliku baza.json.
  * Wywoływana po każdej zmianie statystyk gracza.
  */
 function saveStats(userId, stats) {
@@ -58,7 +57,7 @@ function saveStats(userId, stats) {
     const data = Object.fromEntries(userStats);
     fs.writeFileSync(STATS_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.error('❌ Błąd podczas zapisywania stats.json:', err);
+    console.error('❌ Błąd podczas zapisywania baza.json:', err);
   }
 }
 
