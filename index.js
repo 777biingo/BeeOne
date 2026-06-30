@@ -2,78 +2,71 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-const embedDrafts = new Map();
-
-client.once('ready', () => {
-    console.log(`Zalogowano jako ${client.user.tag}!`);
-    client.application.commands.set([{
-        name: 'embed-stworz',
-        description: 'Otwiera kreator embedów'
-    }]);
-});
+const data = new Map(); // Przechowuje stan embeda dla każdego użytkownika
 
 client.on(Events.InteractionCreate, async interaction => {
     const uid = interaction.user.id;
+    if (!data.has(uid)) data.set(uid, { title: 'Tytuł', desc: 'Opis', color: 0x4974FF, timestamp: false });
 
-    // 1. Komenda /embed-stworz
+    // 1. KOMENDA /embed-stworz
     if (interaction.isChatInputCommand() && interaction.commandName === 'embed-stworz') {
-        const embed = new EmbedBuilder().setTitle('Kreator').setDescription('Użyj przycisków').setColor(0x4974FF);
         const row1 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_title').setLabel('Tytuł').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_desc').setLabel('Treść').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_color').setLabel('Kolor HEX').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_image').setLabel('Obraz').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('btn_text').setLabel('TEKST').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_color').setLabel('KOLOR').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_extras').setLabel('DODATKI').setStyle(ButtonStyle.Primary)
         );
         const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_save').setLabel('Gotowe').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('btn_download').setLabel('Pobierz JSON').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('btn_images').setLabel('OBRAZY').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('btn_save').setLabel('GOTOWE').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('btn_download').setLabel('POBIERZ').setStyle(ButtonStyle.Secondary)
         );
-        await interaction.reply({ embeds: [embed], components: [row1, row2] });
+        await interaction.reply({ embeds: [new EmbedBuilder().setTitle('Kreator')], components: [row1, row2] });
     }
 
-    // 2. Obsługa przycisków -> otwieranie Modali
+    // 2. PRZYCISKI (Otwieranie Modali)
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_download') {
-            return interaction.reply({ content: `\`\`\`json\n${JSON.stringify(embedDrafts.get(uid) || {}, null, 2)}\n\`\`\``, ephemeral: true });
+            const d = data.get(uid);
+            return interaction.reply({ content: `\`\`\`Tytuł:\`\`\`\n${d.title}\n\n\`\`\`Treść:\`\`\`\n${d.desc}\n\n\`\`\`Kolor:\`\`\`\n#${d.color.toString(16)}`, ephemeral: true });
         }
-        if (interaction.customId === 'btn_save') {
-            return interaction.reply({ content: 'Embed gotowy!', ephemeral: true });
-        }
+        if (interaction.customId === 'btn_save') return interaction.reply({ content: 'Zapisano!', ephemeral: true });
 
-        const map = { btn_title: ['Tytuł', 'Wpisz tytuł'], btn_desc: ['Treść', 'Wpisz treść'], btn_color: ['Kolor', 'Wpisz HEX (np. 4974FF)'], btn_image: ['Obraz', 'Wpisz URL lub "server"'] };
-        const data = map[interaction.customId];
-        
-        if (data) {
-            const modal = new ModalBuilder().setCustomId(`modal_${interaction.customId}`).setTitle(data[0]);
-            const input = new TextInputBuilder().setCustomId('val').setLabel(data[1]).setStyle(interaction.customId === 'btn_desc' ? TextInputStyle.Paragraph : TextInputStyle.Short).setRequired(true);
-            modal.addComponents(new ActionRowBuilder().addComponents(input));
-            await interaction.showModal(modal);
-        }
+        // Definicje formularzy
+        const modals = {
+            btn_text: { id: 'm_text', title: 'TEKST', inputs: [{ id: 'title', label: 'Tytuł' }, { id: 'desc', label: 'Opis', style: TextInputStyle.Paragraph }] },
+            btn_color: { id: 'm_color', title: 'KOLOR', inputs: [{ id: 'hex', label: 'HEX' }] },
+            btn_extras: { id: 'm_extras', title: 'DODATKI', inputs: [{ id: 'author', label: 'Autor' }, { id: 'footer', label: 'Stopka' }, { id: 'ts', label: 'Timestamp (tak/nie)' }, { id: 'auth_icon', label: 'Ikonka autora' }, { id: 'foot_icon', label: 'Ikonka stopki' }] },
+            btn_images: { id: 'm_images', title: 'OBRAZY', inputs: [{ id: 'thumb', label: 'Thumbnail' }, { id: 'main', label: 'Main image' }] }
+        };
+
+        const m = modals[interaction.customId];
+        const modal = new ModalBuilder().setCustomId(m.id).setTitle(m.title);
+        m.inputs.forEach(i => modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(i.id).setLabel(i.label).setStyle(i.style || TextInputStyle.Short))));
+        await interaction.showModal(modal);
     }
 
-    // 3. Obsługa Modali -> zapisywanie danych
+    // 3. OBSŁUGA FORMULARZY
     if (interaction.isModalSubmit()) {
-        const val = interaction.fields.getTextInputValue('val');
-        const draft = embedDrafts.get(uid) || {};
-        
-        if (interaction.customId === 'modal_btn_title') draft.title = val;
-        if (interaction.customId === 'modal_btn_desc') draft.description = val;
-        if (interaction.customId === 'modal_btn_color') draft.color = parseInt(val.replace('#', ''), 16);
-        if (interaction.customId === 'modal_btn_image') draft.image = val;
-        
-        embedDrafts.set(uid, draft);
-        
-        const finalEmbed = new EmbedBuilder()
-            .setTitle(draft.title || 'Brak')
-            .setDescription(draft.description || 'Brak')
-            .setColor(draft.color || 0x4974FF);
-        
-        if (draft.image) {
-            const url = draft.image === 'server' ? interaction.guild.iconURL() : draft.image;
-            finalEmbed.setThumbnail(url);
+        const d = data.get(uid);
+        if (interaction.customId === 'm_text') { d.title = interaction.fields.getTextInputValue('title'); d.desc = interaction.fields.getTextInputValue('desc'); }
+        if (interaction.customId === 'm_color') d.color = parseInt(interaction.fields.getTextInputValue('hex').replace('#', ''), 16);
+        if (interaction.customId === 'm_extras') {
+            d.author = interaction.fields.getTextInputValue('author');
+            d.footer = interaction.fields.getTextInputValue('footer');
+            d.ts = interaction.fields.getTextInputValue('ts').toLowerCase() === 'tak';
+            d.auth_i = interaction.fields.getTextInputValue('auth_icon');
+            d.foot_i = interaction.fields.getTextInputValue('foot_icon');
         }
-        
-        await interaction.update({ embeds: [finalEmbed] });
+        if (interaction.customId === 'm_images') { d.thumb = interaction.fields.getTextInputValue('thumb'); d.main = interaction.fields.getTextInputValue('main'); }
+
+        const eb = new EmbedBuilder().setTitle(d.title).setDescription(d.desc).setColor(d.color);
+        if (d.author) eb.setAuthor({ name: d.author, iconURL: d.auth_i || null });
+        if (d.footer) eb.setFooter({ text: d.footer, iconURL: d.foot_i === 'server' ? interaction.guild.iconURL() : d.foot_i });
+        if (d.ts) eb.setTimestamp();
+        if (d.thumb) eb.setThumbnail(d.thumb);
+        if (d.main) eb.setImage(d.main);
+
+        await interaction.update({ embeds: [eb] });
     }
 });
 
