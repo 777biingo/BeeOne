@@ -23,7 +23,7 @@ client.on(Events.InteractionCreate, async interaction => {
         await interaction.reply({ embeds: [new EmbedBuilder().setTitle('Kreator')], components: [row1, row2] });
     }
 
-    // 2. OBSŁUGA PRZYCISKÓW
+    // 2. OBSŁUGA PRZYCISKÓW (z wczytywaniem danych do Modali)
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_download') {
             const d = data.get(uid);
@@ -31,18 +31,27 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         if (interaction.customId === 'btn_save') return interaction.reply({ content: 'Embed został zapisany!', ephemeral: true });
 
+        const d = data.get(uid);
         const modals = {
-            btn_text: { id: 'm_text', title: 'TEKST', inputs: [{ id: 'title', label: 'Tytuł' }, { id: 'desc', label: 'Opis', style: TextInputStyle.Paragraph }] },
-            btn_color: { id: 'm_color', title: 'KOLOR', inputs: [{ id: 'hex', label: 'HEX' }] },
-            btn_extras: { id: 'm_extras', title: 'DODATKI', inputs: [{ id: 'author', label: 'Autor' }, { id: 'footer', label: 'Stopka' }, { id: 'ts', label: 'Timestamp (tak/nie)' }, { id: 'auth_icon', label: 'Ikonka autora' }, { id: 'foot_icon', label: 'Ikonka stopki' }] },
-            btn_images: { id: 'm_images', title: 'OBRAZY', inputs: [{ id: 'thumb', label: 'Thumbnail' }, { id: 'main', label: 'Main image' }] }
+            btn_text: { id: 'm_text', title: 'TEKST', inputs: [{ id: 'title', label: 'Tytuł', val: d.title }, { id: 'desc', label: 'Opis', val: d.desc, style: TextInputStyle.Paragraph }] },
+            btn_color: { id: 'm_color', title: 'KOLOR', inputs: [{ id: 'hex', label: 'HEX', val: d.color ? d.color.toString(16) : '' }] },
+            btn_extras: { id: 'm_extras', title: 'DODATKI', inputs: [{ id: 'author', label: 'Autor', val: d.author }, { id: 'footer', label: 'Stopka', val: d.footer }, { id: 'ts', label: 'Timestamp (tak/nie)', val: d.ts ? 'tak' : 'nie' }, { id: 'auth_icon', label: 'Ikonka autora', val: d.auth_i }, { id: 'foot_icon', label: 'Ikonka stopki', val: d.foot_i }] },
+            btn_images: { id: 'm_images', title: 'OBRAZY', inputs: [{ id: 'thumb', label: 'Thumbnail', val: d.thumb }, { id: 'main', label: 'Main image', val: d.main }] }
         };
 
         const m = modals[interaction.customId];
         const modal = new ModalBuilder().setCustomId(m.id).setTitle(m.title);
-        m.inputs.forEach(i => modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(i.id).setLabel(i.label).setStyle(i.style || TextInputStyle.Short).setRequired(false))));
+        m.inputs.forEach(i => modal.addComponents(new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+                .setCustomId(i.id)
+                .setLabel(i.label)
+                .setStyle(i.style || TextInputStyle.Short)
+                .setValue(i.val || '') // <--- TO JEST KLUCZ DO TWOJEGO PROBLEMU
+                .setRequired(false)
+        )));
         await interaction.showModal(modal);
     }
+
 
     // 3. OBSŁUGA MODALI
     if (interaction.isModalSubmit()) {
